@@ -123,6 +123,9 @@ class Client {
                   reject(err);
                   return;
                 });
+              }).catch((err) => {
+                reject(err);
+                return;
               });
             });
           });
@@ -142,11 +145,8 @@ class Client {
           });
           resolve(files);
           return;
-        }).catch((err) => {
-          reject(err);
-          return;
-        });
-      });
+        }).catch(e => reject("Download failed: " + e))
+      }).catch(e => reject("Can't find latest version: " + e));
     });
   }
 

@@ -29,7 +29,7 @@ function checksumFile(file) {
   return new Promise(function(resolve, reject) {
     fs.access(path.join(file.path, path.basename(file.url)), (err) => {
       if (err) {
-        reject();
+        reject(err);
       } else {
         if (!file.checksum) {
           // No checksum so return true;
