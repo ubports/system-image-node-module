@@ -17,22 +17,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const fs = require('fs');
-const request = require('request');
+const fs = require("fs");
+const request = require("request");
 
-const chai = require('chai');
+const chai = require("chai");
 var sinonChai = require("sinon-chai");
 var expect = chai.expect;
 chai.use(sinonChai);
 
-const SystemImageClient = require('../../src/module.js').Client;
+const SystemImageClient = require("../../src/module.js").Client;
 const channelJson = require("../test-data/normal-channels.json");
 const baconIndexJson = require("../test-data/bacon-index.json");
 const baconLatestVersionJson = require("../test-data/bacon-latest-version.json");
 const commandfileJson = require("../test-data/commandfile.json");
 const filesUrlsJson = require("../test-data/files-urls.json");
 
-describe('Client module', function() {
+describe("Client module", function() {
   describe("constructor()", function() {
     it("should create default client", function() {
       const sic = new SystemImageClient();
@@ -65,8 +65,10 @@ describe('Client module', function() {
           host: "http://system-image.example.com/"
         });
       } catch (err) {
-        expect(err.message).to.equal("Insecure URL! Call with allow_insecure to ignore.");
-      };
+        expect(err.message).to.equal(
+          "Insecure URL! Call with allow_insecure to ignore."
+        );
+      }
     });
 
     it("should ensure create insecure client", function() {
@@ -84,7 +86,7 @@ describe('Client module', function() {
         });
       } catch (err) {
         expect(err.message).to.equal("Host is not a valid URL!");
-      };
+      }
     });
 
     it("should return invalid url with no host", function() {
@@ -95,14 +97,19 @@ describe('Client module', function() {
         });
       } catch (err) {
         expect(err.message).to.equals("Host is not a valid URL!");
-      };
+      }
     });
   });
 
   describe("createInstallCommands()", function() {
     it("should return install commands", function() {
       const sic = new SystemImageClient();
-      var result = sic.createInstallCommands(baconLatestVersionJson.files, true, true, [1, 2, 3]);
+      var result = sic.createInstallCommands(
+        baconLatestVersionJson.files,
+        true,
+        true,
+        [1, 2, 3]
+      );
       expect(result).to.eql(commandfileJson);
     });
 
@@ -114,29 +121,48 @@ describe('Client module', function() {
 
     it("should not add 'format data' when wipe === false", function() {
       const sic = new SystemImageClient();
-      var result = sic.createInstallCommands(baconLatestVersionJson.files, true, false, true, [1, 2, 3]);
+      var result = sic.createInstallCommands(
+        baconLatestVersionJson.files,
+        true,
+        false,
+        true,
+        [1, 2, 3]
+      );
       expect(result).to.not.contain("\nformat data");
     });
 
     it("should not add 'enabled' when enable is set to false", function() {
       const sic = new SystemImageClient();
-      var result = sic.createInstallCommands(baconLatestVersionJson.files, true, true, false, [1, 2, 3]);
+      var result = sic.createInstallCommands(
+        baconLatestVersionJson.files,
+        true,
+        true,
+        false,
+        [1, 2, 3]
+      );
       expect(result).to.not.contain("\nenable\n");
     });
 
     it("should not add 'installer_check' when installerCheck === false", function() {
       const sic = new SystemImageClient();
-      var result = sic.createInstallCommands(baconLatestVersionJson.files, false, true, true, [1, 2, 3]);
+      var result = sic.createInstallCommands(
+        baconLatestVersionJson.files,
+        false,
+        true,
+        true,
+        [1, 2, 3]
+      );
       expect(result).to.not.contain("\ninstaller_check");
-    })
-
+    });
   });
 
   describe("createInstallCommandsFile()", function() {
     it("should create install commands file", function() {
       const sic = new SystemImageClient();
       var file = sic.createInstallCommandsFile(commandfileJson, "bacon");
-      expect(file.indexOf("test/commandfile/ubuntu_commandbacon") != -1).to.eql(true);
+      expect(file.indexOf("test/commandfile/ubuntu_commandbacon") != -1).to.eql(
+        true
+      );
       expect(fs.readFileSync(file).toString()).to.eql(commandfileJson);
     });
     // TODO introduce a test case with invalid input
@@ -144,67 +170,88 @@ describe('Client module', function() {
 
   describe("getReleaseDate()", function() {
     it("should return release date", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(false, {statusCode: 200}, baconIndexJson);
-      });
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(false, { statusCode: 200 }, baconIndexJson);
+        });
 
       const sic = new SystemImageClient();
-      return sic.getReleaseDate("bacon", "ubports-touch/15.04/stable").then((result) => {
-        expect(result).to.eql("Mon Dec 18 08:54:59 UTC 2017");
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
-          json: true
-        });
-      });
-    });
-
-    it("should use cache", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(false, {statusCode: 200}, baconIndexJson);
-      });
-
-      const sic = new SystemImageClient({cache_time: 0});
-      return sic.getReleaseDate("bacon", "ubports-touch/15.04/stable").then((result1) => {
-        return sic.getReleaseDate("bacon", "ubports-touch/15.04/stable").then((result2) => {
-          expect(result1).to.eql("Mon Dec 18 08:54:59 UTC 2017");
-          expect(result1).to.eql(result2);
-          expect(requestStub).to.have.been.calledOnce;
+      return sic
+        .getReleaseDate("bacon", "ubports-touch/15.04/stable")
+        .then(result => {
+          expect(result).to.eql("Mon Dec 18 08:54:59 UTC 2017");
           expect(requestStub).to.have.been.calledWith({
-            url: "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
+            url:
+              "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
             json: true
           });
         });
-      });
+    });
+
+    it("should use cache", function() {
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(false, { statusCode: 200 }, baconIndexJson);
+        });
+
+      const sic = new SystemImageClient({ cache_time: 0 });
+      return sic
+        .getReleaseDate("bacon", "ubports-touch/15.04/stable")
+        .then(result1 => {
+          return sic
+            .getReleaseDate("bacon", "ubports-touch/15.04/stable")
+            .then(result2 => {
+              expect(result1).to.eql("Mon Dec 18 08:54:59 UTC 2017");
+              expect(result1).to.eql(result2);
+              expect(requestStub).to.have.been.calledOnce;
+              expect(requestStub).to.have.been.calledWith({
+                url:
+                  "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
+                json: true
+              });
+            });
+        });
     });
 
     it("should return error", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(true, {statusCode: 500}, baconIndexJson);
-      });
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(true, { statusCode: 500 }, baconIndexJson);
+        });
 
       const sic = new SystemImageClient();
-      return sic.getReleaseDate("bacon", "ubports-touch/15.04/stable").then(() => {}).catch((err) => {
-        expect(err).to.eql(true);
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
-          json: true
+      return sic
+        .getReleaseDate("bacon", "ubports-touch/15.04/stable")
+        .then(() => {})
+        .catch(err => {
+          expect(err).to.eql(true);
+          expect(requestStub).to.have.been.calledWith({
+            url:
+              "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
+            json: true
+          });
         });
-      });
     });
   });
 
   describe("getChannels()", function() {
     it("should return channels", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(false, {statusCode: 200}, channelJson);
-      });
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(false, { statusCode: 200 }, channelJson);
+        });
 
       const sic = new SystemImageClient();
-      return sic.getChannels().then((result) => {
-        expect(result).to.eql(['ubports-touch/15.04/devel',
-          'ubports-touch/15.04/rc',
-          'ubports-touch/15.04/stable',
-          'ubports-touch/16.04/devel'
+      return sic.getChannels().then(result => {
+        expect(result).to.eql([
+          "ubports-touch/15.04/devel",
+          "ubports-touch/15.04/rc",
+          "ubports-touch/15.04/stable",
+          "ubports-touch/16.04/devel"
         ]);
         expect(requestStub).to.have.been.calledWith({
           url: "https://system-image.ubports.com/channels.json",
@@ -214,32 +261,40 @@ describe('Client module', function() {
     });
 
     it("should return error", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(true, {statusCode: 500}, channelJson);
-      });
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(true, { statusCode: 500 }, channelJson);
+        });
 
       const sic = new SystemImageClient();
-      return sic.getChannels().then(() => {}).catch((err) => {
-        expect(err).to.eql(true);
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/channels.json",
-          json: true
+      return sic
+        .getChannels()
+        .then(() => {})
+        .catch(err => {
+          expect(err).to.eql(true);
+          expect(requestStub).to.have.been.calledWith({
+            url: "https://system-image.ubports.com/channels.json",
+            json: true
+          });
         });
-      });
     });
   });
 
   describe("getDeviceChannels()", function() {
     it("should return device channels", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(false, {statusCode: 200}, channelJson);
-      });
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(false, { statusCode: 200 }, channelJson);
+        });
 
       const sic = new SystemImageClient();
-      return sic.getDeviceChannels("krillin").then((result) => {
-        expect(result).to.eql(['ubports-touch/15.04/devel',
-          'ubports-touch/15.04/rc',
-          'ubports-touch/15.04/stable'
+      return sic.getDeviceChannels("krillin").then(result => {
+        expect(result).to.eql([
+          "ubports-touch/15.04/devel",
+          "ubports-touch/15.04/rc",
+          "ubports-touch/15.04/stable"
         ]);
         expect(requestStub).to.have.been.calledWith({
           url: "https://system-image.ubports.com/channels.json",
@@ -249,49 +304,65 @@ describe('Client module', function() {
     });
 
     it("should return error", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(true, {statusCode: 500}, channelJson);
-      });
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(true, { statusCode: 500 }, channelJson);
+        });
 
       const sic = new SystemImageClient();
-      return sic.getDeviceChannels("krillin").then(() => {}).catch((err) => {
-        expect(err).to.eql(true);
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/channels.json",
-          json: true
+      return sic
+        .getDeviceChannels("krillin")
+        .then(() => {})
+        .catch(err => {
+          expect(err).to.eql(true);
+          expect(requestStub).to.have.been.calledWith({
+            url: "https://system-image.ubports.com/channels.json",
+            json: true
+          });
         });
-      });
     });
   });
 
   describe("getLatestVersion()", function() {
     it("should return latest version", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(false, {statusCode: 200}, baconIndexJson);
-      });
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(false, { statusCode: 200 }, baconIndexJson);
+        });
 
       const sic = new SystemImageClient();
-      return sic.getLatestVersion("bacon", "ubports-touch/15.04/devel").then((result) => {
-        expect(result).to.eql(baconLatestVersionJson);
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/ubports-touch/15.04/devel/bacon/index.json",
-          json: true
+      return sic
+        .getLatestVersion("bacon", "ubports-touch/15.04/devel")
+        .then(result => {
+          expect(result).to.eql(baconLatestVersionJson);
+          expect(requestStub).to.have.been.calledWith({
+            url:
+              "https://system-image.ubports.com/ubports-touch/15.04/devel/bacon/index.json",
+            json: true
+          });
         });
-      });
     });
 
     it("should return error", function() {
-      const requestStub = this.sandbox.stub(request, 'get').callsFake(function(url, cb) {
-        cb(true, {statusCode: 500}, baconIndexJson);
-      });
-      const sic = new SystemImageClient();
-      return sic.getLatestVersion("bacon", "ubports-touch/15.04/devel").then(() => {}).catch((err) => {
-        expect(err).to.eql(true);
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/ubports-touch/15.04/devel/bacon/index.json",
-          json: true
+      const requestStub = this.sandbox
+        .stub(request, "get")
+        .callsFake(function(url, cb) {
+          cb(true, { statusCode: 500 }, baconIndexJson);
         });
-      });
+      const sic = new SystemImageClient();
+      return sic
+        .getLatestVersion("bacon", "ubports-touch/15.04/devel")
+        .then(() => {})
+        .catch(err => {
+          expect(err).to.eql(true);
+          expect(requestStub).to.have.been.calledWith({
+            url:
+              "https://system-image.ubports.com/ubports-touch/15.04/devel/bacon/index.json",
+            json: true
+          });
+        });
     });
   });
 
@@ -299,10 +370,22 @@ describe('Client module', function() {
     it("should return gpg urls array", function() {
       const sic = new SystemImageClient();
       expect(sic.getGgpUrlsArray()).to.eql([
-        { "path": "test/gpg", "url": "https://system-image.ubports.com/gpg/image-signing.tar.xz" },
-        { "path": "test/gpg", "url": "https://system-image.ubports.com/gpg/image-signing.tar.xz.asc" },
-        { "path": "test/gpg", "url": "https://system-image.ubports.com/gpg/image-master.tar.xz" },
-        { "path": "test/gpg", "url": "https://system-image.ubports.com/gpg/image-master.tar.xz.asc" }
+        {
+          path: "test/gpg",
+          url: "https://system-image.ubports.com/gpg/image-signing.tar.xz"
+        },
+        {
+          path: "test/gpg",
+          url: "https://system-image.ubports.com/gpg/image-signing.tar.xz.asc"
+        },
+        {
+          path: "test/gpg",
+          url: "https://system-image.ubports.com/gpg/image-master.tar.xz"
+        },
+        {
+          path: "test/gpg",
+          url: "https://system-image.ubports.com/gpg/image-master.tar.xz.asc"
+        }
       ]);
     });
   });
@@ -310,29 +393,37 @@ describe('Client module', function() {
   describe("getFilesUrlsArray()", function() {
     it("should return files urls", function() {
       const sic = new SystemImageClient();
-      expect(sic.getFilesUrlsArray(baconLatestVersionJson)).to.eql(filesUrlsJson);
+      expect(sic.getFilesUrlsArray(baconLatestVersionJson)).to.eql(
+        filesUrlsJson
+      );
     });
     it("should return error", function() {
       const sic = new SystemImageClient();
       try {
         sic.getFilesUrlsArray([]);
       } catch (err) {
-        expect(err.message).to.eql("Cannot read property 'forEach' of undefined");
+        expect(err.message).to.eql(
+          "Cannot read property 'forEach' of undefined"
+        );
       }
     });
-  })
+  });
 
   describe("getFilePushArray()", function() {
     it("should return files urls", function() {
       const sic = new SystemImageClient();
-      expect(sic.getFilePushArray(filesUrlsJson)).to.eql(require("../test-data/file-push.json"));
+      expect(sic.getFilePushArray(filesUrlsJson)).to.eql(
+        require("../test-data/file-push.json")
+      );
     });
     it("should return error", function() {
       const sic = new SystemImageClient();
       try {
         sic.getFilePushArray([]);
       } catch (err) {
-        expect(err.message).to.eql("Cannot read property 'forEach' of undefined");
+        expect(err.message).to.eql(
+          "Cannot read property 'forEach' of undefined"
+        );
       }
     });
   });
