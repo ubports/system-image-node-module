@@ -27,7 +27,7 @@ function getRandomInt(min, max) {
 
 function checksumFile(file) {
   return new Promise(function(resolve, reject) {
-    fs.access(path.join(file.path, path.basename(file.url)), (err) => {
+    fs.access(path.join(file.path, path.basename(file.url)), err => {
       if (err) {
         reject(err);
       } else {
@@ -36,19 +36,25 @@ function checksumFile(file) {
           resolve();
           return;
         } else {
-          checksum.file(path.join(file.path, path.basename(file.url)), {
-            algorithm: "sha256"
-          }, function(err, sum) {
-            console.log("checked: " +path.basename(file.url), sum === file.checksum);
-            if (sum === file.checksum) resolve()
-            else reject()
-          });
+          checksum.file(
+            path.join(file.path, path.basename(file.url)),
+            {
+              algorithm: "sha256"
+            },
+            function(err, sum) {
+              console.log(
+                "checked: " + path.basename(file.url),
+                sum === file.checksum
+              );
+              if (sum === file.checksum) resolve();
+              else reject();
+            }
+          );
         }
       }
     });
   });
 }
-
 
 module.exports = {
   getRandomInt: getRandomInt,
