@@ -19,12 +19,24 @@ const fs = require("fs");
 const checksum = require("checksum");
 const path = require("path");
 
+/**
+ * Returns a random integer between a minimum and a maximum.
+ * @param {int} min - The minimum value.
+ * @param {int} max - The maximum value.
+ * @returns {int} - The random integer
+ */
 function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
+/**
+ * Performs a checksum if exists and returns true if it passes
+ * @param {int} min - The minimum value.
+ * @param {int} max - The maximum value.
+ * @returns {Promise} - Promise that is resolved if there is no checksum or if the checksum is valid
+ */
 function checksumFile(file) {
   return new Promise(function(resolve, reject) {
     fs.access(path.join(file.path, path.basename(file.url)), err => {
@@ -56,6 +68,10 @@ function checksumFile(file) {
   });
 }
 
+/**
+ * A module that contains methods common for server and client
+ * @module common
+ */
 module.exports = {
   getRandomInt: getRandomInt,
   checksumFile: checksumFile

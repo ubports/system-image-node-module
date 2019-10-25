@@ -45,7 +45,16 @@ const gpg = [
   "image-master.tar.xz.asc"
 ];
 
+/**
+ * A class representing a Client connection
+ * @class
+ */
 class Client {
+
+  /**
+    * @constructs Client
+    * @param {Object} options
+    */
   constructor(options) {
     this.host = DEFAULT_HOST;
     this.cache_time = DEFAULT_CACHE_TIME;
@@ -83,12 +92,18 @@ class Client {
     }
   }
 
-  // options argument format
-  // {
-  //   device     Codename of the device
-  //   channel    Release channel to download
-  //   wipe       Wipe memory
-  // }
+  /**
+   * Downloads the latest version
+   * @param {Object} options - An object with the following structure:
+   * {
+   *   device     Codename of the device
+   *   channel    Release channel to download
+   *   wipe       Wipe memory
+   * }
+   * @param {function} progress
+   * @param {function} next
+   * @returns {Promise}
+   */
   downloadLatestVersion(options, progress, next) {
     var _this = this;
     return new Promise(function(resolve, reject) {
@@ -181,7 +196,14 @@ class Client {
     });
   }
 
-  // Install commands
+  /**
+   * Create the install commands 
+   * @param {Array} files - A list of files
+   * @param {function} installerCheck
+   * @param {boolean} wipe
+   * @param {Array} enable
+   * @returns {String} - A list of commands
+   */
   createInstallCommands(files, installerCheck, wipe, enable) {
     var cmd = startCommands;
     if (wipe === true) cmd += "\nformat data";
@@ -205,6 +227,12 @@ class Client {
     return cmd;
   }
 
+  /**
+   * Write the install commands into a file
+   * @param {String} cmds - A list of commands
+   * @param {String} device
+   * @returns {String} - A path to the file
+   */
   createInstallCommandsFile(cmds, device) {
     if (!fs.existsSync(path.join(this.path, "commandfile"))) {
       mkdirp.sync(path.join(this.path, "commandfile"));
@@ -218,7 +246,10 @@ class Client {
     return file;
   }
 
-  // HTTP functions
+  /**
+   * Function to retrieve the data from cache, if index is expired information is retrieved from a HTTP call
+   * @returns {Promise} - A promise that resolves with the current data
+   */
   getChannelsIndex() {
     const _this = this;
     return new Promise(function(resolve, reject) {
@@ -243,6 +274,12 @@ class Client {
     });
   }
 
+  /**
+   * Retrieves the index of a device in a channel, performs an HTTP request if the cache is expired
+   * @param {String} device - Name of the device
+   * @param {String} channel - Name of the channel
+   * @returns {Promise} - Promise resolves with the index for a given device and channel
+   */
   getDeviceIndex(device, channel) {
     var _this = this;
     return new Promise(function(resolve, reject) {
@@ -275,12 +312,22 @@ class Client {
     });
   }
 
+  /**
+   * Retrieves the release date of a device in a channel.
+   * @param {String} device - Name of the device
+   * @param {String} channel - Name of the channel
+   * @returns {Promise} - Promise resolves with the date if was generated at for a given device and channel
+   */
   getReleaseDate(device, channel) {
     return this.getDeviceIndex(device, channel).then(deviceIndex => {
       return deviceIndex.global.generated_at;
     });
   }
 
+  /**
+   * Retrieves a list of channels.
+   * @returns {Promise} - Promise resolves with the list of channels
+   */
   getChannels() {
     return this.getChannelsIndex().then(_channels => {
       var channels = [];
@@ -292,6 +339,11 @@ class Client {
     });
   }
 
+  /**
+   * Retrieves a list of channels for a device.
+   * @param {String} device - Name of the device
+   * @returns {Promise} - Promise resolves with the list of channels for a given device
+   */
   getDeviceChannels(device) {
     return this.getChannelsIndex().then(channels => {
       var deviceChannels = [];
@@ -305,6 +357,12 @@ class Client {
     });
   }
 
+  /**
+   * Retrieves a list of channels.
+   * @param {String} device - Name of the device
+   * @param {String} channel - Name of the channel
+   * @returns {Promise} - Promise resolves with the latest version from the images
+   */
   getLatestVersion(device, channel) {
     return this.getDeviceIndex(device, channel).then(index => {
       //TODO optimize with searching in reverse, but foreach is safer
@@ -319,6 +377,10 @@ class Client {
     });
   }
 
+  /**
+   * Getter for retrieving GPG URLs
+   * @returns {Array} - Returns an array of GPG URLs
+   */
   getGgpUrlsArray() {
     var gpgUrls = [];
     gpg.forEach(g => {
@@ -330,6 +392,10 @@ class Client {
     return gpgUrls;
   }
 
+  /**
+   * Getter for retrieving File URLs
+   * @returns {Array} - Returns an array of URLs for the files
+   */
   getFilesUrlsArray(index) {
     var ret = [];
     index.files.forEach(file => {
@@ -346,6 +412,10 @@ class Client {
     return ret;
   }
 
+  /**
+   * Adds urls to the file and returns it
+   * @returns {Array} - Returns an array of files with the new urls added to it
+   */
   getFilePushArray(urls) {
     var files = [];
     urls.forEach(url => {
