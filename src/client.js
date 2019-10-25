@@ -50,11 +50,10 @@ const gpg = [
  * @class
  */
 class Client {
-
   /**
-    * @constructs Client
-    * @param {Object} options
-    */
+   * @constructs Client
+   * @param {Object} options
+   */
   constructor(options) {
     this.host = DEFAULT_HOST;
     this.cache_time = DEFAULT_CACHE_TIME;
@@ -197,7 +196,7 @@ class Client {
   }
 
   /**
-   * Create the install commands 
+   * Create the install commands
    * @param {Array} files - A list of files
    * @param {function} installerCheck
    * @param {boolean} wipe
