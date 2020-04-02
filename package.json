@@ -20,10 +20,11 @@
   },
   "homepage": "https://github.com/ubports/system-image-node-module#readme",
   "dependencies": {
+    "axios": "^0.19.2",
     "chai": "^4.2.0",
     "checksum": "^0.1.1",
     "coveralls": "^3.0.11",
-    "download": "^7.1.0",
+    "download": "^8.0.0",
     "mkdirp": "^0.5.4",
     "mocha": "^6.2.3",
     "nyc": "^14.1.1",

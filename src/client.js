@@ -1,7 +1,9 @@
 "use strict";
 
 /*
+* Copyright (C) 2017-2020 UBports Foundation <info@ubports.com>
  * Copyright (C) 2017-2018 Marius Gripsgard <marius@ubports.com>
+ * Copyright (C) 2017-2020 Jan Sprinz <neo@neothethird.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const http = require("request");
+const axios = require("axios");
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
@@ -253,23 +255,18 @@ class Client {
     const _this = this;
     return new Promise(function(resolve, reject) {
       var now = time();
-      if (_this.channelsIndexCache && _this.channelsIndexCache.expire > now)
-        return resolve(_this.channelsIndexCache.data);
-      http.get(
-        {
-          url: _this.host + "channels.json",
-          json: true
-        },
-        (err, res, bod) => {
-          if (err || res.statusCode !== 200) {
-            reject(err);
-            return;
-          }
-          _this.channelsIndexCache.data = bod;
-          _this.channelsIndexCache.expire = time() + _this.cache_time;
-          resolve(_this.channelsIndexCache.data);
-        }
-      );
+      if (_this.channelsIndexCache && _this.channelsIndexCache.expire > now) {
+        resolve(_this.channelsIndexCache.data);
+      } else {
+        axios
+          .get(`${_this.host}channels.json`)
+          .then(response => {
+            _this.channelsIndexCache.data = response.data;
+            _this.channelsIndexCache.expire = time() + _this.cache_time;
+            resolve(_this.channelsIndexCache.data);
+          })
+          .catch(reject);
+      }
     });
   }
 
@@ -287,27 +284,22 @@ class Client {
         _this.deviceIndexCache[device] &&
         _this.deviceIndexCache[device][channel] &&
         _this.deviceIndexCache[device][channel].expire > now
-      )
-        return resolve(_this.deviceIndexCache[device][channel].data);
-      http.get(
-        {
-          url: _this.host + channel + "/" + device + "/index.json",
-          json: true
-        },
-        (err, res, bod) => {
-          if (err || res.statusCode !== 200) {
-            reject(err);
-            return;
-          }
-          if (!_this.deviceIndexCache[device])
-            _this.deviceIndexCache[device] = {};
-          _this.deviceIndexCache[device][channel] = {};
-          _this.deviceIndexCache[device][channel].data = bod;
-          _this.deviceIndexCache[device][channel].expire =
-            time() + _this.cache_time;
-          resolve(_this.deviceIndexCache[device][channel].data);
-        }
-      );
+      ) {
+        resolve(_this.deviceIndexCache[device][channel].data);
+      } else {
+        axios
+          .get(`${_this.host}${channel}/${device}/index.json`)
+          .then(response => {
+            if (!_this.deviceIndexCache[device])
+              _this.deviceIndexCache[device] = {};
+            _this.deviceIndexCache[device][channel] = {};
+            _this.deviceIndexCache[device][channel].data = response.data;
+            _this.deviceIndexCache[device][channel].expire =
+              time() + _this.cache_time;
+            resolve(_this.deviceIndexCache[device][channel].data);
+          })
+          .catch(reject);
+      }
     });
   }
 
