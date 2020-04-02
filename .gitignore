@@ -67,3 +67,6 @@ typings/
 
 # ignore test output
 test
+
+# ignore test file
+test.js

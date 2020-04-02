@@ -1,7 +1,7 @@
 "use strict";
 
 /*
-* Copyright (C) 2017-2020 UBports Foundation <info@ubports.com>
+ * Copyright (C) 2017-2020 UBports Foundation <info@ubports.com>
  * Copyright (C) 2017-2018 Marius Gripsgard <marius@ubports.com>
  * Copyright (C) 2017-2020 Jan Sprinz <neo@neothethird.de>
  *

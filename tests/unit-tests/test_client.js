@@ -18,9 +18,11 @@
  */
 
 const fs = require("fs");
-const request = require("request");
+const axios = require("axios");
+const moxios = require("moxios");
 
 const chai = require("chai");
+const sinon = require("sinon");
 var sinonChai = require("sinon-chai");
 var expect = chai.expect;
 chai.use(sinonChai);
@@ -31,6 +33,8 @@ const baconIndexJson = require("../test-data/bacon-index.json");
 const baconLatestVersionJson = require("../test-data/bacon-latest-version.json");
 const commandfileJson = require("../test-data/commandfile.json");
 const filesUrlsJson = require("../test-data/files-urls.json");
+
+const time = () => Math.floor(new Date() / 1000);
 
 describe("Client module", function() {
   describe("constructor()", function() {
@@ -98,6 +102,186 @@ describe("Client module", function() {
       } catch (err) {
         expect(err.message).to.equals("Host is not a valid URL!");
       }
+    });
+  });
+
+  describe("getChannelsIndex()", function() {
+    it("should resolve channels index and store cache", function(done) {
+      const sic = new SystemImageClient();
+      const thenSpy = sinon.spy();
+      const catchSpy = sinon.spy();
+      expect(sic.channelsIndexCache).to.eql({ expire: 0 });
+      sic
+        .getChannelsIndex()
+        .then(thenSpy)
+        .catch(catchSpy);
+
+      moxios.wait(function() {
+        let request = moxios.requests.mostRecent();
+        request
+          .respondWith({
+            status: 200,
+            response: channelJson
+          })
+          .then(function() {
+            try {
+              expect(thenSpy).to.have.been.calledOnceWith(channelJson);
+              expect(sic.channelsIndexCache.data).to.eql(channelJson);
+              expect(thenSpy).to.not.have.been.calledTwice;
+              expect(catchSpy).to.not.have.been.called;
+              done();
+            } catch (e) {
+              done(`unfulfilled assertions: ${e}`);
+            }
+          });
+      });
+    });
+
+    it("should use cache", function(done) {
+      const sic = new SystemImageClient();
+      sic.channelsIndexCache = {
+        expire: time() + 180,
+        data: "hello :)"
+      };
+      sic
+        .getChannelsIndex()
+        .then(r => {
+          try {
+            expect(r).to.eql("hello :)");
+            done();
+          } catch (e) {
+            done(`unfulfilled assertions: ${e}`);
+          }
+        })
+        .catch(e => done(`unfulfilled assertions: ${e}`));
+    });
+
+    it("cache should expire", function(done) {
+      const sic = new SystemImageClient();
+      sic.channelsIndexCache = {
+        expire: time() - 180,
+        data: "hello :)"
+      };
+      const thenSpy = sinon.spy();
+      const catchSpy = sinon.spy();
+      sic
+        .getChannelsIndex()
+        .then(thenSpy)
+        .catch(catchSpy);
+
+      moxios.wait(function() {
+        let request = moxios.requests.mostRecent();
+        request
+          .respondWith({
+            status: 200,
+            response: channelJson
+          })
+          .then(function() {
+            try {
+              expect(thenSpy).to.have.been.calledOnceWith(channelJson);
+              expect(sic.channelsIndexCache.data).to.eql(channelJson);
+              expect(thenSpy).to.not.have.been.calledTwice;
+              expect(catchSpy).to.not.have.been.called;
+              done();
+            } catch (e) {
+              done(`unfulfilled assertions: ${e}`);
+            }
+          });
+      });
+    });
+  });
+
+  describe("getDeviceIndex()", function() {
+    it("should resolve device index and store cache", function(done) {
+      const sic = new SystemImageClient();
+      const thenSpy = sinon.spy();
+      const catchSpy = sinon.spy();
+      expect(sic.deviceIndexCache).to.eql({});
+      sic
+        .getDeviceIndex("bacon", "ubports-touch/15.04/stable")
+        .then(thenSpy)
+        .catch(catchSpy);
+
+      moxios.wait(function() {
+        let request = moxios.requests.mostRecent();
+        request
+          .respondWith({
+            status: 200,
+            response: baconIndexJson
+          })
+          .then(function() {
+            try {
+              expect(thenSpy).to.have.been.calledOnceWith(baconIndexJson);
+              expect(
+                sic.deviceIndexCache["bacon"]["ubports-touch/15.04/stable"].data
+              ).to.eql(baconIndexJson);
+              expect(thenSpy).to.not.have.been.calledTwice;
+              expect(catchSpy).to.not.have.been.called;
+              done();
+            } catch (e) {
+              done(`unfulfilled assertions: ${e}`);
+            }
+          });
+      });
+    });
+
+    it("should use cache", function(done) {
+      const sic = new SystemImageClient();
+      sic.deviceIndexCache.bacon = {
+        "ubports-touch/15.04/stable": {
+          expire: time() + 180,
+          data: "hello :)"
+        }
+      };
+      sic
+        .getDeviceIndex("bacon", "ubports-touch/15.04/stable")
+        .then(r => {
+          try {
+            expect(r).to.eql("hello :)");
+            done();
+          } catch (e) {
+            done(`unfulfilled assertions: ${e}`);
+          }
+        })
+        .catch(e => done(`unfulfilled assertions: ${e}`));
+    });
+
+    it("cache should expire", function(done) {
+      const sic = new SystemImageClient();
+      sic.deviceIndexCache.bacon = {
+        "ubports-touch/15.04/stable": {
+          expire: time() - 180,
+          data: "hello :)"
+        }
+      };
+      const thenSpy = sinon.spy();
+      const catchSpy = sinon.spy();
+      sic
+        .getDeviceIndex("bacon", "ubports-touch/15.04/stable")
+        .then(thenSpy)
+        .catch(catchSpy);
+
+      moxios.wait(function() {
+        let request = moxios.requests.mostRecent();
+        request
+          .respondWith({
+            status: 200,
+            response: baconIndexJson
+          })
+          .then(function() {
+            try {
+              expect(thenSpy).to.have.been.calledOnceWith(baconIndexJson);
+              expect(
+                sic.deviceIndexCache["bacon"]["ubports-touch/15.04/stable"].data
+              ).to.eql(baconIndexJson);
+              expect(thenSpy).to.not.have.been.calledTwice;
+              expect(catchSpy).to.not.have.been.called;
+              done();
+            } catch (e) {
+              done(`unfulfilled assertions: ${e}`);
+            }
+          });
+      });
     });
   });
 
@@ -169,83 +353,21 @@ describe("Client module", function() {
   });
 
   describe("getReleaseDate()", function() {
-    it("should return release date", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(false, { statusCode: 200 }, baconIndexJson);
-        });
-
+    it("should resolve release date", function() {
       const sic = new SystemImageClient();
+      sic.getDeviceIndex = sinon.fake.resolves(baconIndexJson);
       return sic
         .getReleaseDate("bacon", "ubports-touch/15.04/stable")
         .then(result => {
           expect(result).to.eql("Mon Dec 18 08:54:59 UTC 2017");
-          expect(requestStub).to.have.been.calledWith({
-            url:
-              "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
-            json: true
-          });
-        });
-    });
-
-    it("should use cache", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(false, { statusCode: 200 }, baconIndexJson);
-        });
-
-      const sic = new SystemImageClient({ cache_time: 0 });
-      return sic
-        .getReleaseDate("bacon", "ubports-touch/15.04/stable")
-        .then(result1 => {
-          return sic
-            .getReleaseDate("bacon", "ubports-touch/15.04/stable")
-            .then(result2 => {
-              expect(result1).to.eql("Mon Dec 18 08:54:59 UTC 2017");
-              expect(result1).to.eql(result2);
-              expect(requestStub).to.have.been.calledOnce;
-              expect(requestStub).to.have.been.calledWith({
-                url:
-                  "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
-                json: true
-              });
-            });
-        });
-    });
-
-    it("should return error", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(true, { statusCode: 500 }, baconIndexJson);
-        });
-
-      const sic = new SystemImageClient();
-      return sic
-        .getReleaseDate("bacon", "ubports-touch/15.04/stable")
-        .then(() => {})
-        .catch(err => {
-          expect(err).to.eql(true);
-          expect(requestStub).to.have.been.calledWith({
-            url:
-              "https://system-image.ubports.com/ubports-touch/15.04/stable/bacon/index.json",
-            json: true
-          });
         });
     });
   });
 
   describe("getChannels()", function() {
-    it("should return channels", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(false, { statusCode: 200 }, channelJson);
-        });
-
+    it("should resolve channels", function() {
       const sic = new SystemImageClient();
+      sic.getChannelsIndex = sinon.fake.resolves(channelJson);
       return sic.getChannels().then(result => {
         expect(result).to.eql([
           "ubports-touch/15.04/devel",
@@ -253,115 +375,32 @@ describe("Client module", function() {
           "ubports-touch/15.04/stable",
           "ubports-touch/16.04/devel"
         ]);
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/channels.json",
-          json: true
-        });
       });
-    });
-
-    it("should return error", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(true, { statusCode: 500 }, channelJson);
-        });
-
-      const sic = new SystemImageClient();
-      return sic
-        .getChannels()
-        .then(() => {})
-        .catch(err => {
-          expect(err).to.eql(true);
-          expect(requestStub).to.have.been.calledWith({
-            url: "https://system-image.ubports.com/channels.json",
-            json: true
-          });
-        });
     });
   });
 
   describe("getDeviceChannels()", function() {
-    it("should return device channels", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(false, { statusCode: 200 }, channelJson);
-        });
-
+    it("should resolve device channels", function() {
       const sic = new SystemImageClient();
+      sic.getChannelsIndex = sinon.fake.resolves(channelJson);
       return sic.getDeviceChannels("krillin").then(result => {
         expect(result).to.eql([
           "ubports-touch/15.04/devel",
           "ubports-touch/15.04/rc",
           "ubports-touch/15.04/stable"
         ]);
-        expect(requestStub).to.have.been.calledWith({
-          url: "https://system-image.ubports.com/channels.json",
-          json: true
-        });
       });
-    });
-
-    it("should return error", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(true, { statusCode: 500 }, channelJson);
-        });
-
-      const sic = new SystemImageClient();
-      return sic
-        .getDeviceChannels("krillin")
-        .then(() => {})
-        .catch(err => {
-          expect(err).to.eql(true);
-          expect(requestStub).to.have.been.calledWith({
-            url: "https://system-image.ubports.com/channels.json",
-            json: true
-          });
-        });
     });
   });
 
   describe("getLatestVersion()", function() {
-    it("should return latest version", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(false, { statusCode: 200 }, baconIndexJson);
-        });
-
+    it("should resolve latest version", function() {
       const sic = new SystemImageClient();
+      sic.getDeviceIndex = sinon.fake.resolves(baconIndexJson);
       return sic
         .getLatestVersion("bacon", "ubports-touch/15.04/devel")
         .then(result => {
           expect(result).to.eql(baconLatestVersionJson);
-          expect(requestStub).to.have.been.calledWith({
-            url:
-              "https://system-image.ubports.com/ubports-touch/15.04/devel/bacon/index.json",
-            json: true
-          });
-        });
-    });
-
-    it("should return error", function() {
-      const requestStub = this.sandbox
-        .stub(request, "get")
-        .callsFake(function(url, cb) {
-          cb(true, { statusCode: 500 }, baconIndexJson);
-        });
-      const sic = new SystemImageClient();
-      return sic
-        .getLatestVersion("bacon", "ubports-touch/15.04/devel")
-        .then(() => {})
-        .catch(err => {
-          expect(err).to.eql(true);
-          expect(requestStub).to.have.been.calledWith({
-            url:
-              "https://system-image.ubports.com/ubports-touch/15.04/devel/bacon/index.json",
-            json: true
-          });
         });
     });
   });
