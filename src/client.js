@@ -356,6 +356,12 @@ class Client {
    */
   getLatestVersion(device, channel) {
     return this.getDeviceIndex(device, channel).then(index => {
+      if (!index.images)
+        throw new Error(
+          `No images for ${device} on channel ${channel}: ${JSON.stringify(
+            index
+          )}`
+        );
       //TODO optimize with searching in reverse, but foreach is safer
       // to use now to be sure we get latest version
       var latest = false;
