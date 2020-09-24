@@ -403,6 +403,16 @@ describe("Client module", function() {
           expect(result).to.eql(baconLatestVersionJson);
         });
     });
+    it("should reject if no images available", function(done) {
+      const sic = new SystemImageClient();
+      sic.getDeviceIndex = sinon.fake.resolves({});
+      sic
+        .getLatestVersion("bacon", "ubports-touch/15.04/devel")
+        .catch(error => {
+          expect(error.message).to.eql("No images for bacon on channel ubports-touch/15.04/devel: {}");
+          done();
+        });
+    });
   });
 
   describe("getGgpUrlsArray()", function() {
