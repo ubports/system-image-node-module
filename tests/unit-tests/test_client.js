@@ -344,7 +344,7 @@ describe("Client module", function() {
     it("should create install commands file", function() {
       const sic = new SystemImageClient();
       var file = sic.createInstallCommandsFile(commandfileJson, "bacon");
-      expect(file.indexOf("test/commandfile/ubuntu_commandbacon") != -1).to.eql(
+      expect(file.indexOf("test/system-image/ubuntu_command") != -1).to.eql(
         true
       );
       expect(fs.readFileSync(file).toString()).to.eql(commandfileJson);
@@ -409,7 +409,9 @@ describe("Client module", function() {
       sic
         .getLatestVersion("bacon", "ubports-touch/15.04/devel")
         .catch(error => {
-          expect(error.message).to.eql("No images for bacon on channel ubports-touch/15.04/devel: {}");
+          expect(error.message).to.eql(
+            "No images for bacon on channel ubports-touch/15.04/devel: {}"
+          );
           done();
         });
     });
@@ -420,19 +422,19 @@ describe("Client module", function() {
       const sic = new SystemImageClient();
       expect(sic.getGgpUrlsArray()).to.eql([
         {
-          path: "test/gpg",
+          path: "test/system-image/gpg/image-signing.tar.xz",
           url: "https://system-image.ubports.com/gpg/image-signing.tar.xz"
         },
         {
-          path: "test/gpg",
+          path: "test/system-image/gpg/image-signing.tar.xz.asc",
           url: "https://system-image.ubports.com/gpg/image-signing.tar.xz.asc"
         },
         {
-          path: "test/gpg",
+          path: "test/system-image/gpg/image-master.tar.xz",
           url: "https://system-image.ubports.com/gpg/image-master.tar.xz"
         },
         {
-          path: "test/gpg",
+          path: "test/system-image/gpg/image-master.tar.xz.asc",
           url: "https://system-image.ubports.com/gpg/image-master.tar.xz.asc"
         }
       ]);
