@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Marius Gripsgard <marius@ubports.com>
+ * Copyright (C) 2017-2020 UBports Foundation <marius@ubports.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,10 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Client = require("./client.js");
-const Server = require("./server.js");
-
 module.exports = {
-  Client: Client,
-  Server: Server
+  Client: require("./client.js"),
+  Server: require("./server.js")
 };

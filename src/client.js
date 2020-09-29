@@ -20,12 +20,9 @@
  */
 
 const axios = require("axios");
-const os = require("os");
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
-const mkdirp = require("mkdirp");
-const download = require("download");
-const common = require("./common.js");
+const { download } = require("progressive-downloader");
 
 const time = () => Math.floor(new Date() / 1000);
 
@@ -38,7 +35,6 @@ const endCommands = "\nunmount system\n";
 const DEFAULT_HOST = "https://system-image.ubports.com/";
 const DEFAULT_CACHE_TIME = 180; // 3 minutes
 const DEFAULT_PATH = "./test";
-const ubuntuCommandFile = "ubuntu_command";
 const ubuntuPushDir = "/cache/recovery/";
 const gpg = [
   "image-signing.tar.xz",
@@ -103,98 +99,35 @@ class Client {
    * }
    * @param {function} progress
    * @param {function} next
+   * @param {function} activity
    * @returns {Promise}
    */
-  downloadLatestVersion(options, progress, next) {
+  downloadLatestVersion(options, progress, next, activity) {
     var _this = this;
-    return new Promise(function(resolve, reject) {
-      _this
-        .getLatestVersion(options.device, options.channel)
-        .then(latest => {
-          var urls = _this.getFilesUrlsArray(latest);
-          urls.push.apply(urls, _this.getGgpUrlsArray());
-          var filesDownloaded = 0;
-          var overallSize = 0;
-          var overallDownloaded = 0;
-          var previousOverallDownloaded = 0;
-          var downloadProgress = 0;
-          var progressInterval = setInterval(() => {
-            downloadProgress = overallDownloaded / overallSize;
-            if (overallSize != 0) {
-              if (downloadProgress < 0.999) {
-                progress(
-                  downloadProgress,
-                  (overallDownloaded - previousOverallDownloaded) / 1000000
-                );
-                previousOverallDownloaded = overallDownloaded;
-              } else {
-                clearInterval(progressInterval);
-                progress(1, 0);
-              }
-            }
-          }, 1000);
-          Promise.all(
-            urls.map(file => {
-              return new Promise(function(resolve, reject) {
-                common
-                  .checksumFile(file)
-                  .then(() => {
-                    next(++filesDownloaded, urls.length);
-                    resolve();
-                    return;
-                  })
-                  .catch(() => {
-                    download(file.url, file.path)
-                      .on("response", res => {
-                        var totalSize = eval(res.headers["content-length"]);
-                        overallSize += totalSize;
-                        var downloaded = 0;
-                        res.on("data", data => {
-                          overallDownloaded += data.length;
-                        });
-                      })
-                      .then(() => {
-                        common
-                          .checksumFile(file)
-                          .then(() => {
-                            next(++filesDownloaded, urls.length);
-                            resolve();
-                            return;
-                          })
-                          .catch(err => {
-                            reject(err);
-                            return;
-                          });
-                      })
-                      .catch(err => {
-                        reject(err);
-                        return;
-                      });
-                  });
-              });
-            })
-          )
-            .then(() => {
-              var files = _this.getFilePushArray(urls);
-              files.push({
-                src: _this.createInstallCommandsFile(
-                  _this.createInstallCommands(
-                    latest.files,
-                    options.installerCheck,
-                    options.wipe,
-                    options.enable
-                  ),
-                  options.device
-                ),
-                dest: ubuntuPushDir + ubuntuCommandFile
-              });
-              resolve(files);
-              return;
-            })
-            .catch(e => reject("Download failed: " + e));
-        })
-        .catch(e => reject("Can't find latest version: " + e));
-    });
+    return this.getLatestVersion(options.device, options.channel)
+      .then(files => [
+        ..._this.getFilesUrlsArray(files),
+        ..._this.getGgpUrlsArray()
+      ])
+      .then(files => download(files, progress, next, activity))
+      .then(files => [
+        ..._this.getFilePushArray(files),
+        {
+          src: _this.createInstallCommandsFile(
+            _this.createInstallCommands(
+              files,
+              options.installerCheck,
+              options.wipe,
+              options.enable
+            ),
+            options.device
+          ),
+          dest: path.join(ubuntuPushDir, "ubuntu_command")
+        }
+      ])
+      .catch(e => {
+        throw new Error(`Failed to download latest version ${e}`);
+      });
   }
 
   /**
@@ -206,45 +139,48 @@ class Client {
    * @returns {String} - A list of commands
    */
   createInstallCommands(files, installerCheck, wipe, enable) {
-    var cmd = startCommands;
-    if (wipe === true) cmd += "\nformat data";
-    if (files.constructor !== Array) return false;
-    files.forEach(file => {
-      cmd +=
-        "\nupdate " +
-        path.basename(file.path) +
-        " " +
-        path.basename(file.signature);
-    });
-    if (enable) {
-      if (enable.constructor === Array) {
-        enable.forEach(en => {
-          cmd += "\nenable " + en;
+    try {
+      var cmd = startCommands;
+      if (wipe === true) cmd += "\nformat data";
+      if (files.constructor !== Array) return false;
+      files
+        .filter(f => f.signature)
+        .forEach(file => {
+          cmd +=
+            "\nupdate " +
+            path.basename(file.path) +
+            " " +
+            path.basename(file.signature);
         });
+      if (enable) {
+        if (enable.constructor === Array) {
+          enable.forEach(en => {
+            cmd += "\nenable " + en;
+          });
+        }
       }
+      cmd += endCommands;
+      if (installerCheck) cmd += "\ninstaller_check";
+      return cmd;
+    } catch (e) {
+      throw new Error(`Failed to create install commands: ${e}`);
     }
-    cmd += endCommands;
-    if (installerCheck) cmd += "\ninstaller_check";
-    return cmd;
   }
 
   /**
    * Write the install commands into a file
    * @param {String} cmds - A list of commands
-   * @param {String} device
    * @returns {String} - A path to the file
    */
-  createInstallCommandsFile(cmds, device) {
-    if (!fs.existsSync(path.join(this.path, "commandfile"))) {
-      mkdirp.sync(path.join(this.path, "commandfile"));
+  createInstallCommandsFile(cmds) {
+    try {
+      fs.ensureDirSync(path.join(this.path, "commandfile"));
+      const file = path.join(this.path, "system-image", `ubuntu_command`);
+      fs.writeFileSync(file, cmds);
+      return file;
+    } catch (e) {
+      throw new Error(`Could not create install commands file ${e}`);
     }
-    var file = path.join(
-      this.path,
-      "commandfile",
-      ubuntuCommandFile + device + common.getRandomInt(1000, 9999)
-    );
-    fs.writeFileSync(file, cmds);
-    return file;
   }
 
   /**
@@ -383,7 +319,7 @@ class Client {
     gpg.forEach(g => {
       gpgUrls.push({
         url: this.host + "gpg/" + g,
-        path: path.join(this.path, "gpg")
+        path: path.join(this.path, "system-image/gpg", g)
       });
     });
     return gpgUrls;
@@ -397,13 +333,25 @@ class Client {
     var ret = [];
     index.files.forEach(file => {
       ret.push({
+        ...file,
         url: this.host + file.path,
-        path: path.join(this.path, "pool"),
-        checksum: file.checksum
+        path: path.join(
+          this.path,
+          "system-image/pool",
+          path.basename(file.path)
+        ),
+        checksum: {
+          sum: file.checksum,
+          algorithm: "sha256"
+        }
       });
       ret.push({
         url: this.host + file.signature,
-        path: path.join(this.path, "pool")
+        path: path.join(
+          this.path,
+          "system-image/pool",
+          path.basename(file.signature)
+        )
       });
     });
     return ret;
@@ -417,7 +365,8 @@ class Client {
     var files = [];
     urls.forEach(url => {
       files.push({
-        src: path.join(url.path, path.basename(url.url)),
+        ...url,
+        src: url.path,
         dest: ubuntuPushDir
       });
     });
