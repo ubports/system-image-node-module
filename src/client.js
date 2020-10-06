@@ -122,7 +122,7 @@ class Client {
             ),
             options.device
           ),
-          dest: path.join(ubuntuPushDir, "ubuntu_command")
+          dest: `${ubuntuPushDir}/ubuntu_command`
         }
       ])
       .catch(e => {
