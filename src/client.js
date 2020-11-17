@@ -174,7 +174,7 @@ class Client {
    */
   createInstallCommandsFile(cmds) {
     try {
-      fs.ensureDirSync(path.join(this.path, "commandfile"));
+      fs.ensureDirSync(path.join(this.path, "system-image"));
       const file = path.join(this.path, "system-image", `ubuntu_command`);
       fs.writeFileSync(file, cmds);
       return file;
